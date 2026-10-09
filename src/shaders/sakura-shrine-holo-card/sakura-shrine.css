@@ -1,0 +1,90 @@
+.sakura-shrine {
+  --ink: #fff4f7;
+  --muted: rgba(255, 228, 238, 0.72);
+  --panel: rgba(28, 10, 26, 0.55);
+  --line: rgba(255, 190, 214, 0.28);
+  --accent: #ff7aa2;
+  --vermilion: #d4321f;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: "Noto Sans Thai", system-ui, sans-serif;
+  background: #120a1c;
+}
+.sakura-shrine--hanami {
+  --ink: #3a1022;
+  --muted: rgba(70, 25, 45, 0.75);
+  --panel: rgba(255, 245, 249, 0.62);
+  --line: rgba(200, 60, 100, 0.25);
+  background: #f6dce6;
+}
+.sakura-shrine__canvas, .sakura-shrine__canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.sakura-shrine__header {
+  position: absolute; top: 20px; left: 24px; display: flex; gap: 14px; align-items: center; pointer-events: none;
+}
+.sakura-shrine__mon {
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 26px;
+  background: var(--vermilion); color: #ffe7ee; box-shadow: 0 0 24px rgba(255, 90, 120, 0.5);
+}
+.sakura-shrine__header h1 { margin: 0; font: 700 28px/1.1 "Shippori Mincho", serif; letter-spacing: 0.12em; }
+.sakura-shrine__header p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+
+.sakura-shrine__info {
+  position: absolute; left: 24px; top: 50%; transform: translateY(-50%); width: 240px; padding: 18px 20px;
+  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--vermilion);
+  backdrop-filter: blur(10px); border-radius: 4px 14px 14px 4px; animation: shrine-in 0.6s ease both;
+}
+.sakura-shrine__no { font-size: 12px; letter-spacing: 0.2em; color: var(--accent); }
+.sakura-shrine__info h2 { margin: 6px 0 2px; font: 700 32px/1.15 "Shippori Mincho", serif; }
+.sakura-shrine__sub { margin: 0 0 14px; color: var(--muted); }
+.sakura-shrine__info dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
+.sakura-shrine__info dt { color: var(--muted); font-family: "Shippori Mincho", serif; }
+.sakura-shrine__info dd { margin: 0; }
+
+.sakura-shrine__controls {
+  position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); display: flex; gap: 10px;
+}
+.sakura-shrine button { font: inherit; color: var(--ink); cursor: pointer; }
+.sakura-shrine__controls button {
+  white-space: nowrap;
+  min-width: 44px; height: 44px; border-radius: 22px; padding: 0 16px; font-size: 15px;
+  background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(8px); transition: background 0.2s, transform 0.2s;
+}
+.sakura-shrine__controls button:hover { background: rgba(212, 50, 31, 0.6); transform: translateY(-1px); }
+.sakura-shrine__controls > button:not(.sakura-shrine__gallery-btn) { font-size: 24px; padding: 0; }
+.sakura-shrine__gallery-btn[aria-pressed="true"] { background: rgba(212, 50, 31, 0.7) !important; }
+
+.sakura-shrine__strip {
+  position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 8px;
+  max-width: calc(100% - 32px); overflow-x: auto; padding: 4px; scrollbar-width: none;
+}
+.sakura-shrine__strip button {
+  flex: 0 0 auto; width: 46px; height: 68px; border-radius: 6px; border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.12) center / cover no-repeat; opacity: 0.6; transition: all 0.25s;
+}
+.sakura-shrine__strip button:hover { opacity: 1; transform: translateY(-3px); }
+.sakura-shrine__strip button.is-active { opacity: 1; border-color: #ffd27a; box-shadow: 0 0 16px rgba(255, 140, 180, 0.7); transform: translateY(-4px); }
+
+.sakura-shrine__hint {
+  position: absolute; right: 24px; top: 28px; margin: 0; font-size: 12px; color: var(--muted); max-width: 300px; text-align: right;
+}
+
+@keyframes shrine-in { from { opacity: 0; transform: translate(-12px, -50%); } }
+
+@media (max-width: 820px) {
+  .sakura-shrine__header { left: 16px; top: 14px; }
+  .sakura-shrine__header h1 { font-size: 22px; }
+  .sakura-shrine__hint { display: none; }
+  .sakura-shrine__info {
+    left: 16px; right: 16px; width: auto; top: auto; bottom: 160px; transform: none; padding: 10px 14px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; animation: none;
+  }
+  .sakura-shrine__info h2 { font-size: 22px; margin: 0; }
+  .sakura-shrine__sub { margin: 0; }
+  .sakura-shrine__info dl { display: none; }
+  .sakura-shrine__controls { bottom: 100px; }
+  .sakura-shrine__controls button { font-size: 13px; padding: 0 12px; }
+}
