@@ -42,7 +42,12 @@ const found = import.meta.glob("/src/cosplay/*.{jpg,jpeg,png,webp,avif,JPG,JPEG,
 
 /** Optional per-file captions: key = file name in src/cosplay/. */
 export const captions: Record<string, Partial<CosplayPhoto>> = {
-  // "IMG_0001.jpg": { character: "桜の巫女", subtitle: "Sakura no Miko", series: "Shrine Maiden", cosplayer: "@mos" },
+  // Edit these to match each photo (key = file name in src/cosplay/).
+  "01.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "02.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "03.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "04.jpg": { character: "暁", subtitle: "Akatsuki", series: "Naruto · Akatsuki" },
+  "05.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
 };
 
 const userPhotos: CosplayPhoto[] = Object.keys(found)
