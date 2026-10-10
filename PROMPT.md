@@ -56,3 +56,18 @@ export function Scene() {
 - Reduce petal speed when `prefers-reduced-motion` is set
 - Release every WebGL resource when the component unmounts
 - After building, run it and check in a browser: tilt, card selection, gallery mode and both variants
+
+---
+
+# Part 2: <ShrineGalleryWalk /> — walk through the exhibition in first person
+
+Turn the main page into a game-like experience: you walk through a "cosplay photo exhibition" set in a shrine full of sakura, as if you came out to see a photo show for real.
+
+- **First-person view**: WASD + mouse look (Pointer Lock, with drag-to-look as a fallback), Shift to run, gentle head bob while walking; on mobile, a virtual joystick on the left half and drag to look on the right half
+- **Exhibition path**: a stone path through **senbon torii** (a torii every 4 m) with red-white paper lanterns hanging under every gate, sakura trees on both sides, and the shrine hall at the end
+- **Display boards**: wooden **ema-style** boards with a small roof, alternating left and right; photos keep their real proportions (no cropping), with a gold frame and a soft foil that glows when you get close, plus a placard with number, character name and series, and a stone lantern lighting each board
+- **Entrance**: a big torii and a signboard 桜神社 写真展
+- **Viewing**: walk up to and face a photo → the prompt `E` appears → the camera glides in front of the photo and an info panel appears; `←` `→` to move between photos, `1`–`9` to jump to a photo
+- **Game-style HUD**: viewed-photo counter + progress bar, a minimap of the path, a start screen with instructions, and a pause screen
+- **Performance**: a pool of only 6 lantern lights moves to the lanterns nearest the player; the sky, sun shadows and falling petals follow the player; works with any number of photos
+- Keep the old card page at `?view=card`, and share the shrine/sakura builders between the two pages (`world.ts`)

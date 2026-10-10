@@ -22,6 +22,7 @@ uniform float uActive;   // 1 for the featured card
 uniform float uHover;
 uniform float uAspect;   // width / height
 uniform vec3 uAccent;
+uniform float uFoil;    // overall foil amount (1 = trading-card look)
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vViewDir;
@@ -67,7 +68,7 @@ void main() {
   float flower = sakura(f, 0.34) * step(0.35, hash(cell + 7.0));
   float lum = dot(photo, vec3(0.299, 0.587, 0.114));
   float foilMask = mix(0.18, 1.0, flower) * mix(0.55, 1.0, smoothstep(0.2, 0.85, lum));
-  float foilStrength = (0.22 + 0.33 * uActive + 0.15 * uHover) * (0.55 + 0.45 * length(uTilt) + fres);
+  float foilStrength = (0.22 + 0.33 * uActive + 0.15 * uHover) * (0.55 + 0.45 * length(uTilt) + fres) * uFoil;
   col += rainbow * foilMask * foilStrength * 0.55;
   col = mix(col, col * (0.85 + 0.3 * rainbow), 0.25 * foilStrength);
 
@@ -141,6 +142,7 @@ attribute vec4 aParams; // speed, phase, spin, scale
 uniform float uTime;
 uniform float uWind;
 uniform vec3 uBox;
+uniform vec3 uCenter; // petals wrap inside a box centred here (follows the viewer)
 varying vec2 vUv;
 varying float vShade;
 mat3 rotXYZ(vec3 a) {
@@ -154,8 +156,8 @@ void main() {
   float t = uTime * aParams.x;
   vec3 pos = aOffset;
   pos.y = mod(aOffset.y - t, uBox.y) - 0.2;
-  pos.x = mod(aOffset.x + t * uWind + uBox.x * 0.5, uBox.x) - uBox.x * 0.5 + sin(uTime * 0.7 + aParams.y) * 0.6;
-  pos.z += cos(uTime * 0.5 + aParams.y * 1.3) * 0.5;
+  pos.x = mod(aOffset.x + t * uWind - uCenter.x + uBox.x * 0.5, uBox.x) - uBox.x * 0.5 + uCenter.x + sin(uTime * 0.7 + aParams.y) * 0.6;
+  pos.z = mod(aOffset.z - uCenter.z + uBox.z * 0.5, uBox.z) - uBox.z * 0.5 + uCenter.z + cos(uTime * 0.5 + aParams.y * 1.3) * 0.5;
   vec3 ang = vec3(uTime * aParams.z + aParams.y, uTime * aParams.z * 0.7, aParams.y * 2.0 + uTime * 0.4);
   mat3 R = rotXYZ(ang);
   vec3 local = R * (position * aParams.w);

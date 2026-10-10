@@ -1,22 +1,11 @@
 import * as THREE from "three";
-import { cardVertex, cardFragment, cardBackFragment, petalVertex, petalFragment, skyVertex, skyFragment } from "./shaders";
+import { cardVertex, cardFragment, cardBackFragment } from "./shaders";
+import {
+  PALETTES, createTracker, createRenderer, createMaterials, buildEnvironment, buildPath, buildTorii, buildHall,
+  buildToro, buildChochinRow, buildSakuraTrees, buildFallingPetals, flicker, type Flame, type ShrineVariant,
+} from "./world";
 
-export type ShrineVariant = "yozakura" | "hanami";
-
-const PALETTES = {
-  yozakura: {
-    skyTop: "#090820", skyHorizon: "#5a2550", fog: "#24122e", fogDensity: 0.045,
-    ambient: 0.35, hemiSky: "#6a5aa8", hemiGround: "#1a0d18", sun: 0.25, sunColor: "#9fb0ff",
-    lantern: 3.2, moon: "#fff2dc", stars: 1, petalA: "#ffb3cb", petalB: "#fff0f5", petalGlow: 1,
-    blossom: "#ffb6cf", blossomEmissive: "#5a1a35", ground: "#1d1418", exposure: 1.1,
-  },
-  hanami: {
-    skyTop: "#6fa6dc", skyHorizon: "#ffe1ea", fog: "#f2d6e2", fogDensity: 0.03,
-    ambient: 0.8, hemiSky: "#cfe6ff", hemiGround: "#8a6a5a", sun: 2.4, sunColor: "#fff1e0",
-    lantern: 0.6, moon: "#ffffff", stars: 0, petalA: "#ff9fbf", petalB: "#ffe6ef", petalGlow: 0,
-    blossom: "#ffc2d6", blossomEmissive: "#3a0f20", ground: "#7d6a5c", exposure: 1.0,
-  },
-} as const;
+export type { ShrineVariant };
 
 const CARD_ASPECT = 2 / 3;
 
@@ -50,270 +39,38 @@ export function createShrineScene(
   onPick: (index: number) => void,
 ): ShrineScene {
   const P = PALETTES[variant];
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = P.exposure;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const renderer = createRenderer(P);
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(P.fog, P.fogDensity);
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
   const camBase = new THREE.Vector3(0, 1.75, 7.2);
   const lookAt = new THREE.Vector3(0, 1.6, 0);
 
-  const disposables: { dispose(): void }[] = [];
-  const track = <T extends { dispose(): void }>(o: T) => (disposables.push(o), o);
-
-  // ---------- sky ----------
-  const skyMat = track(new THREE.ShaderMaterial({
-    vertexShader: skyVertex, fragmentShader: skyFragment, side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: {
-      uTop: { value: new THREE.Color(P.skyTop) }, uHorizon: { value: new THREE.Color(P.skyHorizon) },
-      uMoonColor: { value: new THREE.Color(P.moon) }, uMoonDir: { value: new THREE.Vector3(0.35, 0.42, -1) },
-      uStars: { value: P.stars }, uTime: { value: 0 },
-    },
-  }));
-  scene.add(new THREE.Mesh(track(new THREE.SphereGeometry(90, 32, 16)), skyMat));
-
-  // ---------- lights ----------
-  scene.add(new THREE.AmbientLight(0xffffff, P.ambient * 0.4));
-  scene.add(new THREE.HemisphereLight(P.hemiSky, P.hemiGround, P.ambient));
-  const sun = new THREE.DirectionalLight(P.sunColor, P.sun);
-  sun.position.set(-6, 10, 4);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 });
-  scene.add(sun);
+  const { track, disposeAll } = createTracker();
+  const M = createMaterials(P, track);
+  const { skyMat } = buildEnvironment(scene, P, track);
   const cardLight = new THREE.PointLight("#ffd2e0", 4, 6, 1.6);
   cardLight.position.set(0, 2.6, 4.2);
   scene.add(cardLight);
 
-  // ---------- ground + path ----------
-  const ground = new THREE.Mesh(
-    track(new THREE.CircleGeometry(40, 48)),
-    track(new THREE.MeshStandardMaterial({ color: P.ground, roughness: 0.95 })),
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  buildPath(scene, M, track, 5, 14);
+  buildTorii(scene, M, track, -0.6, 1);
+  buildTorii(scene, M, track, -4.2, 0.92);
+  buildTorii(scene, M, track, -7.8, 0.84);
+  buildHall(scene, M, track, -12.5);
 
-  const stoneMat = track(new THREE.MeshStandardMaterial({ color: "#8a8079", roughness: 0.9 }));
-  const stoneGeo = track(new THREE.BoxGeometry(1, 0.08, 1));
-  for (let i = 0; i < 14; i++) {
-    const s = new THREE.Mesh(stoneGeo, stoneMat);
-    s.position.set((Math.random() - 0.5) * 0.15, 0.03, 5 - i * 1.05);
-    s.scale.set(1.5 + Math.random() * 0.2, 1, 0.85);
-    s.rotation.y = (Math.random() - 0.5) * 0.08;
-    s.receiveShadow = true;
-    scene.add(s);
+  const flames: Flame[] = [];
+  for (const [x, z] of [[-2.4, 2.6], [2.4, 2.6], [-1.9, 0.6], [1.9, 0.6], [-1.9, -3], [1.9, -3]]) {
+    flames.push(buildToro(scene, M, track, P, x, z).flame);
   }
+  for (const side of [-1, 1]) buildChochinRow(scene, M, track, side * 3.1, 4, 9, 1.25);
 
-  // ---------- torii gates ----------
-  const vermilion = track(new THREE.MeshStandardMaterial({ color: "#d4321f", roughness: 0.55, emissive: "#3a0602", emissiveIntensity: 0.4 }));
-  const black = track(new THREE.MeshStandardMaterial({ color: "#1b1414", roughness: 0.6 }));
-  function torii(z: number, s: number) {
-    const g = new THREE.Group();
-    const pillarGeo = track(new THREE.CylinderGeometry(0.17, 0.2, 4.2, 20));
-    for (const x of [-1.75, 1.75]) {
-      const p = new THREE.Mesh(pillarGeo, vermilion);
-      p.position.set(x, 2.1, 0);
-      p.castShadow = true;
-      g.add(p);
-      const foot = new THREE.Mesh(track(new THREE.CylinderGeometry(0.24, 0.24, 0.35, 20)), black);
-      foot.position.set(x, 0.17, 0);
-      g.add(foot);
-    }
-    const nuki = new THREE.Mesh(track(new THREE.BoxGeometry(4.4, 0.22, 0.2)), vermilion);
-    nuki.position.y = 3.35;
-    g.add(nuki);
-    const shimaki = new THREE.Mesh(track(new THREE.BoxGeometry(4.9, 0.26, 0.36)), vermilion);
-    shimaki.position.y = 4.05;
-    g.add(shimaki);
-    // curved kasagi: bent box
-    const kasaGeo = track(new THREE.BoxGeometry(5.8, 0.24, 0.5, 24, 1, 1));
-    const pos = kasaGeo.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      pos.setY(i, pos.getY(i) + Math.pow(Math.abs(x) / 2.9, 2.4) * 0.32);
-    }
-    kasaGeo.computeVertexNormals();
-    const kasagi = new THREE.Mesh(kasaGeo, black);
-    kasagi.position.y = 4.3;
-    kasagi.castShadow = true;
-    g.add(kasagi);
-    const plaque = new THREE.Mesh(track(new THREE.BoxGeometry(0.42, 0.6, 0.08)), black);
-    plaque.position.set(0, 3.7, 0.12);
-    g.add(plaque);
-    g.position.z = z;
-    g.scale.setScalar(s);
-    scene.add(g);
-  }
-  torii(-0.6, 1);
-  torii(-4.2, 0.92);
-  torii(-7.8, 0.84);
-
-  // shrine hall silhouette at the end of the path
-  const hall = new THREE.Group();
-  const hallBody = new THREE.Mesh(track(new THREE.BoxGeometry(5, 2.2, 3)), track(new THREE.MeshStandardMaterial({ color: "#4a1a14", roughness: 0.8 })));
-  hallBody.position.y = 1.5;
-  hall.add(hallBody);
-  const roof = new THREE.Mesh(track(new THREE.ConeGeometry(4.4, 1.8, 4, 1)), black);
-  roof.rotation.y = Math.PI / 4;
-  roof.scale.set(1.3, 1, 0.85);
-  roof.position.y = 3.4;
-  hall.add(roof);
-  const doorGlow = new THREE.Mesh(track(new THREE.PlaneGeometry(2.4, 1.3)), track(new THREE.MeshBasicMaterial({ color: "#ffb36b" })));
-  doorGlow.position.set(0, 1.2, 1.51);
-  hall.add(doorGlow);
-  hall.position.set(0, 0, -12.5);
-  scene.add(hall);
-
-  // ---------- stone lanterns (toro) with flickering candle light ----------
-  const lanternStone = track(new THREE.MeshStandardMaterial({ color: "#9a948c", roughness: 0.92 }));
-  const fireMat = track(new THREE.MeshBasicMaterial({ color: "#ffbf6e" }));
-  const flames: { light: THREE.PointLight; mesh: THREE.Mesh; seed: number }[] = [];
-  function toro(x: number, z: number) {
-    const g = new THREE.Group();
-    const parts: [THREE.BufferGeometry, number][] = [
-      [new THREE.CylinderGeometry(0.42, 0.5, 0.18, 6), 0.09],
-      [new THREE.CylinderGeometry(0.1, 0.13, 0.9, 12), 0.63],
-      [new THREE.CylinderGeometry(0.34, 0.24, 0.14, 6), 1.13],
-    ];
-    for (const [geo, y] of parts) {
-      const m = new THREE.Mesh(track(geo), lanternStone);
-      m.position.y = y;
-      m.castShadow = true;
-      g.add(m);
-    }
-    const fire = new THREE.Mesh(track(new THREE.BoxGeometry(0.34, 0.3, 0.34)), fireMat);
-    fire.position.y = 1.36;
-    g.add(fire);
-    const roofT = new THREE.Mesh(track(new THREE.ConeGeometry(0.55, 0.36, 6)), lanternStone);
-    roofT.position.y = 1.69;
-    roofT.castShadow = true;
-    g.add(roofT);
-    const hoju = new THREE.Mesh(track(new THREE.SphereGeometry(0.09, 12, 8)), lanternStone);
-    hoju.position.y = 1.92;
-    g.add(hoju);
-    const light = new THREE.PointLight("#ff9a4a", P.lantern, 5.5, 1.8);
-    light.position.y = 1.36;
-    g.add(light);
-    flames.push({ light, mesh: fire, seed: Math.random() * 100 });
-    g.position.set(x, 0, z);
-    scene.add(g);
-  }
-  toro(-2.4, 2.6); toro(2.4, 2.6); toro(-1.9, 0.6); toro(1.9, 0.6); toro(-1.9, -3); toro(1.9, -3);
-
-  // ---------- chochin paper lanterns strung between the trees ----------
-  const chochinMats = [
-    track(new THREE.MeshStandardMaterial({ color: "#ff3b3b", emissive: "#ff3020", emissiveIntensity: variant === "yozakura" ? 1.4 : 0.3 })),
-    track(new THREE.MeshStandardMaterial({ color: "#fff3e0", emissive: "#ffd9a0", emissiveIntensity: variant === "yozakura" ? 1.2 : 0.2 })),
-  ];
-  const chochinGeo = track(new THREE.SphereGeometry(0.16, 16, 12));
-  for (const side of [-1, 1]) {
-    for (let i = 0; i < 9; i++) {
-      const z = 4 - i * 1.25;
-      const m = new THREE.Mesh(chochinGeo, chochinMats[i % 2]);
-      m.scale.y = 1.35;
-      m.position.set(side * 3.1, 3.05 - Math.sin((i / 8) * Math.PI) * 0.1, z);
-      scene.add(m);
-    }
-  }
-
-  // ---------- sakura trees ----------
-  const barkMat = track(new THREE.MeshStandardMaterial({ color: "#3b2420", roughness: 0.95 }));
-  const blossomMat = track(new THREE.MeshStandardMaterial({
-    color: P.blossom, roughness: 0.8, emissive: P.blossomEmissive, emissiveIntensity: 0.6, flatShading: true,
-  }));
-  const blossomGeo = track(new THREE.IcosahedronGeometry(0.42, 1));
-  const treeSpots: [number, number, number][] = [
+  buildSakuraTrees(scene, M, track, P, [
     [-4.2, 3.2, 1.1], [4.3, 2.6, 1.15], [-5.2, -1, 1.25], [5.4, -0.4, 1.2], [-4.6, -5.5, 1.3],
     [4.8, -6, 1.3], [-7.5, 1.8, 1.4], [7.6, 1.2, 1.35], [-8, -4, 1.5], [8.2, -3.6, 1.5], [-3.6, -9.5, 1.2], [3.8, -9.8, 1.2],
-  ];
-  const blossomCount = treeSpots.length * 70;
-  const blossoms = new THREE.InstancedMesh(blossomGeo, blossomMat, blossomCount);
-  blossoms.castShadow = true;
-  const m4 = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const v = new THREE.Vector3();
-  const sc = new THREE.Vector3();
-  const blossomColor = new THREE.Color();
-  let bi = 0;
-  for (const [tx, tz, s] of treeSpots) {
-    const trunk = new THREE.Mesh(track(new THREE.CylinderGeometry(0.12 * s, 0.26 * s, 3 * s, 8)), barkMat);
-    trunk.position.set(tx, 1.5 * s, tz);
-    trunk.rotation.z = (Math.random() - 0.5) * 0.25;
-    trunk.castShadow = true;
-    scene.add(trunk);
-    for (let b = 0; b < 3; b++) {
-      const br = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04 * s, 0.09 * s, 1.6 * s, 6)), barkMat);
-      const a = (b / 3) * Math.PI * 2 + Math.random();
-      br.position.set(tx + Math.cos(a) * 0.5 * s, 2.9 * s, tz + Math.sin(a) * 0.5 * s);
-      br.rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9);
-      scene.add(br);
-    }
-    for (let i = 0; i < 70; i++) {
-      const u = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random());
-      v.set(tx + Math.cos(u) * r * 1.9 * s, (3.1 + (Math.random() - 0.3) * 1.3) * s, tz + Math.sin(u) * r * 1.6 * s);
-      q.setFromEuler(new THREE.Euler(Math.random() * 3, Math.random() * 3, 0));
-      const k = (0.7 + Math.random() * 0.8) * s;
-      sc.set(k, k * 0.85, k);
-      m4.compose(v, q, sc);
-      blossoms.setMatrixAt(bi, m4);
-      blossomColor.set(P.blossom).offsetHSL((Math.random() - 0.5) * 0.03, 0, (Math.random() - 0.5) * 0.12);
-      blossoms.setColorAt(bi, blossomColor);
-      bi++;
-    }
-  }
-  scene.add(blossoms);
-
-  // ---------- petals: falling (GPU animated) + carpet on the ground ----------
-  const PETALS = 1800;
-  const petalBase = new THREE.PlaneGeometry(0.09, 0.11);
-  const petalGeo = track(new THREE.InstancedBufferGeometry());
-  petalGeo.index = petalBase.index;
-  petalGeo.setAttribute("position", petalBase.getAttribute("position"));
-  petalGeo.setAttribute("uv", petalBase.getAttribute("uv"));
-  const offsets = new Float32Array(PETALS * 3);
-  const params = new Float32Array(PETALS * 4);
-  const box = new THREE.Vector3(18, 7, 16);
-  for (let i = 0; i < PETALS; i++) {
-    offsets.set([(Math.random() - 0.5) * box.x, Math.random() * box.y, 6 - Math.random() * box.z], i * 3);
-    params.set([0.25 + Math.random() * 0.35, Math.random() * 6.28, 0.6 + Math.random() * 1.8, 0.7 + Math.random() * 0.7], i * 4);
-  }
-  petalGeo.setAttribute("aOffset", new THREE.InstancedBufferAttribute(offsets, 3));
-  petalGeo.setAttribute("aParams", new THREE.InstancedBufferAttribute(params, 4));
-  petalGeo.instanceCount = PETALS;
-  petalBase.dispose();
-  const petalMat = track(new THREE.ShaderMaterial({
-    vertexShader: petalVertex, fragmentShader: petalFragment, transparent: true, side: THREE.DoubleSide, depthWrite: false,
-    uniforms: {
-      uTime: { value: 0 }, uWind: { value: 0.35 }, uBox: { value: box },
-      uColorA: { value: new THREE.Color(P.petalA) }, uColorB: { value: new THREE.Color(P.petalB) }, uGlow: { value: P.petalGlow },
-    },
-  }));
-  const petals = new THREE.Mesh(petalGeo, petalMat);
-  petals.frustumCulled = false;
-  scene.add(petals);
-
-  const carpetMat = track(new THREE.MeshStandardMaterial({ color: P.petalA, roughness: 0.9, side: THREE.DoubleSide }));
-  const carpet = new THREE.InstancedMesh(track(new THREE.CircleGeometry(0.05, 5)), carpetMat, 2600);
-  for (let i = 0; i < 2600; i++) {
-    const nearTree = treeSpots[i % treeSpots.length];
-    const a = Math.random() * Math.PI * 2;
-    const r = Math.random() < 0.6 ? Math.random() * 2.6 : Math.random() * 9;
-    v.set(nearTree[0] * (r > 2.6 ? 0.4 : 1) + Math.cos(a) * r, 0.012, nearTree[1] + Math.sin(a) * r);
-    q.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, Math.random() * 6));
-    sc.setScalar(0.7 + Math.random());
-    m4.compose(v, q, sc);
-    carpet.setMatrixAt(i, m4);
-  }
-  scene.add(carpet);
+  ]);
+  const petalMat = buildFallingPetals(scene, track, P, new THREE.Vector3(18, 7, 16), new THREE.Vector3(0, 0, -2));
 
   // ---------- cosplay photo cards (featured card + hanging ema gallery) ----------
   const cardGeo = track(new THREE.PlaneGeometry(CARD_ASPECT, 1, 1, 1));
@@ -329,7 +86,7 @@ export function createShrineScene(
       uniforms: {
         uMap: { value: placeholderTex }, uTime: { value: 0 }, uTilt: { value: new THREE.Vector2() },
         uPointer: { value: new THREE.Vector2(0.3, 0.7) }, uActive: { value: 0 }, uHover: { value: 0 },
-        uAspect: { value: CARD_ASPECT }, uAccent: { value: new THREE.Color(accentPalette[i % 4]) },
+        uFoil: { value: 1 }, uAspect: { value: CARD_ASPECT }, uAccent: { value: new THREE.Color(accentPalette[i % 4]) },
       },
     })));
     front.userData.index = i;
@@ -469,11 +226,7 @@ export function createShrineScene(
 
     skyMat.uniforms.uTime.value = t;
     petalMat.uniforms.uTime.value = reduceMotion ? t * 0.3 : t;
-    for (const f of flames) {
-      const n = Math.sin(t * 9 + f.seed) * 0.5 + Math.sin(t * 23 + f.seed * 2) * 0.3 + Math.sin(t * 4.3 + f.seed) * 0.2;
-      f.light.intensity = P.lantern * (0.85 + n * 0.15);
-      (f.mesh.material as THREE.MeshBasicMaterial).color.setHSL(0.08, 1, 0.68 + n * 0.05);
-    }
+    flicker(flames, t, P.lantern);
 
     cards.forEach((c, i) => {
       const isFeatured = i === selected && !gallery;
@@ -545,7 +298,7 @@ export function createShrineScene(
         const m = c.front.material.uniforms.uMap.value as THREE.Texture;
         if (m !== placeholderTex) m.dispose();
       });
-      disposables.forEach((d) => d.dispose());
+      disposeAll();
       scene.traverse((o) => {
         if (o instanceof THREE.Mesh) o.geometry.dispose();
       });
