@@ -11,6 +11,7 @@ import type { LightPoint, ZoneCtx } from "./zones/types";
 import { seeded } from "./zones/kit";
 import { buildHub, zoneAngle, zoneDir } from "./hub";
 import { HUB_ENV, createEnvBlender, resolve } from "./env";
+import { bakeStatic } from "./bake";
 
 export type ExhibitMeta = { zone: number; slot: number; photo: CosplayPhoto | null };
 
@@ -26,17 +27,23 @@ export type WalkEvents = {
 export type GalleryWalk = {
   readonly exhibits: ExhibitMeta[];
   readonly isTouch: boolean;
+  /** resolves once every shader has been compiled (no hitches when entering a zone) */
+  readonly ready: Promise<void>;
   start(): void;
   inspect(id: number): void;
   exitInspect(relock: boolean): void;
   step(delta: number): void;
   /** warp to a zone gate, or -1 for the plaza */
   warp(zone: number): void;
+  /** render statistics of the last frame (for testing performance) */
+  stats(): { calls: number; triangles: number; pixelRatio: number };
   dispose(): void;
 };
 
 const FOCUS_DIST = 3.6;
-const LIGHT_POOL = 8;
+const LIGHT_POOL = 4;
+// auto quality: pixel-ratio steps tried when the frame rate drops
+const QUALITY_STEPS = [1.5, 1.25, 1, 0.85, 0.7];
 
 type ZoneRuntime = {
   root: THREE.Group;
@@ -57,12 +64,12 @@ export function createGalleryWalk(
 ): GalleryWalk {
   const n = ZONES.length;
   const P = PALETTES[variant];
-  const renderer = createRenderer(P);
+  const renderer = createRenderer(P, { maxPixelRatio: QUALITY_STEPS[0], shadows: false });
   container.appendChild(renderer.domElement);
   const dom = renderer.domElement;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 260);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 140);
   const { track, disposeAll } = createTracker();
   const M = createMaterials(P, track);
 
@@ -73,10 +80,8 @@ export function createGalleryWalk(
   const hemi = new THREE.HemisphereLight("#ffffff", "#000000", 1);
   scene.add(hemi);
   scene.children.filter((o) => o instanceof THREE.HemisphereLight && o !== hemi).forEach((o) => scene.remove(o));
-  sun.shadow.camera.left = sun.shadow.camera.bottom = -16;
-  sun.shadow.camera.right = sun.shadow.camera.top = 16;
-  sun.shadow.camera.updateProjectionMatrix();
-  const particles = buildFallingPetals(scene, track, P, new THREE.Vector3(18, 7, 22), new THREE.Vector3(), 2400);
+  sun.castShadow = false;
+  const particles = buildFallingPetals(scene, track, P, new THREE.Vector3(18, 7, 22), new THREE.Vector3(), 1600);
 
   // ---------- zones ----------
   const lightPoints: LightPoint[] = [];
@@ -106,6 +111,7 @@ export function createGalleryWalk(
       zx.push(buildExhibit(ctx, theme, k, s, exhibits.length + zx.length, photos[s] ?? null, imagesPerZone[k]?.[s] ?? null));
     }
     exhibits.push(...zx);
+    bakeStatic(root, track, (p) => Math.floor(-p.z / 16));
     root.updateMatrixWorld(true);
     for (const l of ctx.lights) lightPoints.push({ ...l, pos: root.localToWorld(l.pos.clone()) });
     for (const c of ctx.colliders) {
@@ -125,7 +131,8 @@ export function createGalleryWalk(
   const hub = buildHub({ root: hubRoot, track, renderer }, ZONES, photosPerZone.map((p) => p.length), zones.map((z) => z.exhibits.length));
   lightPoints.push(...hub.lights);
   colliders.push(...hub.colliders.slice(1));
-  buildSakuraTrees(hubRoot, M, track, P, hub.trees, 60);
+  buildSakuraTrees(hubRoot, M, track, P, hub.trees, 60, true);
+  bakeStatic(hubRoot, track, (p) => Math.floor((Math.atan2(p.x, p.z) + Math.PI) / (Math.PI / 3)));
 
   const pool = Array.from({ length: LIGHT_POOL }, () => {
     const l = new THREE.PointLight("#ffffff", 0, 7, 1.8);
@@ -158,11 +165,12 @@ export function createGalleryWalk(
     return { x: dx * z.xAxis.x + dz * z.xAxis.z, z: dx * z.zAxis.x + dz * z.zAxis.z };
   };
   /** walkable = inside the plaza or on one of the zone paths */
+  const probe = new THREE.Vector3();
   const walkable = (x: number, z: number) => {
     if (Math.hypot(x, z) <= HUB_R - 0.35) return true;
-    const p = new THREE.Vector3(x, 0, z);
+    probe.set(x, 0, z);
     return zones.some((zr) => {
-      const l = local(p, zr);
+      const l = local(probe, zr);
       return Math.abs(l.x) <= WALK_HALF && l.z <= 2.5 && l.z >= -zr.length + 3.5;
     });
   };
@@ -184,7 +192,11 @@ export function createGalleryWalk(
     player.pitch = -0.05;
   };
 
+  // compile every material up front (all zones are visible right now)
+  const ready = renderer.compileAsync(scene, camera).then(() => {}, () => {});
+
   const api: GalleryWalk = {
+    ready,
     exhibits: exhibits.map((e) => ({ zone: e.zone, slot: e.slot, photo: e.photo })),
     get isTouch() { return controls.isTouch; },
     start() {
@@ -227,6 +239,7 @@ export function createGalleryWalk(
       player.vel.set(0, 0);
       returning = 1;
     },
+    stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio() }),
     dispose() {},
   };
 
@@ -336,6 +349,10 @@ export function createGalleryWalk(
   let minimapTimer = 0;
   let poolTimer = 0;
   let assigned: LightPoint[] = [];
+  let quality = 0;
+  let fpsFrames = 0;
+  let fpsStart = performance.now();
+  let goodWindows = 0;
   camera.position.copy(player.pos);
 
   function frame() {
@@ -343,6 +360,19 @@ export function createGalleryWalk(
     const dt = Math.min(clock.getDelta(), 0.1);
     const t = clock.elapsedTime;
     controls.update();
+
+    // auto quality: drop the resolution while the frame rate is low, restore it when there is headroom
+    fpsFrames++;
+    const fpsTime = (performance.now() - fpsStart) / 1000;
+    if (fpsTime >= 2) {
+      const fps = fpsFrames / fpsTime;
+      fpsFrames = 0;
+      fpsStart = performance.now();
+      if (fps < 48 && quality < QUALITY_STEPS.length - 1) { quality++; goodWindows = 0; }
+      else if (fps > 58 && quality > 0 && ++goodWindows >= 3) { quality--; goodWindows = 0; }
+      const pr = Math.min(window.devicePixelRatio, QUALITY_STEPS[quality]);
+      if (Math.abs(renderer.getPixelRatio() - pr) > 0.01) { renderer.setPixelRatio(pr); resize(); }
+    }
 
     // look + move with collision against the walkable area and round obstacles
     const look = controls.consumeLook();
@@ -478,7 +508,7 @@ export function createGalleryWalk(
     }
 
     minimapTimer -= dt;
-    if (minimapTimer <= 0) { drawMinimap(); minimapTimer = 1 / 30; }
+    if (minimapTimer <= 0) { drawMinimap(); minimapTimer = 1 / 15; }
     renderer.render(scene, camera);
   }
   frame();

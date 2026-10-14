@@ -144,6 +144,9 @@ uniform float uWind;
 uniform vec3 uBox;
 uniform vec3 uCenter; // petals wrap inside a box centred here (follows the viewer)
 uniform float uScale;  // particle size multiplier
+uniform float uDensity; // 0..1 share of particles that are drawn
+uniform float uRise;    // 1 = float upward (embers), 0 = fall
+uniform float uGust;    // extra sideways drift (blowing sand)
 varying vec2 vUv;
 varying float vShade;
 mat3 rotXYZ(vec3 a) {
@@ -154,10 +157,12 @@ mat3 rotXYZ(vec3 a) {
 }
 void main() {
   vUv = uv;
+  // aParams.y is a random phase in 0..2π; use it as a stable rank to thin the particles out
+  if (aParams.y / 6.2832 > uDensity) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   float t = uTime * aParams.x;
   vec3 pos = aOffset;
-  pos.y = mod(aOffset.y - t, uBox.y) - 0.2;
-  pos.x = mod(aOffset.x + t * uWind - uCenter.x + uBox.x * 0.5, uBox.x) - uBox.x * 0.5 + uCenter.x + sin(uTime * 0.7 + aParams.y) * 0.6;
+  pos.y = mix(mod(aOffset.y - t, uBox.y) - 0.2, mod(aOffset.y + t * 0.6, uBox.y), uRise);
+  pos.x = mod(aOffset.x + t * (uWind + uGust) - uCenter.x + uBox.x * 0.5, uBox.x) - uBox.x * 0.5 + uCenter.x + sin(uTime * 0.7 + aParams.y) * 0.6;
   pos.z = mod(aOffset.z - uCenter.z + uBox.z * 0.5, uBox.z) - uBox.z * 0.5 + uCenter.z + cos(uTime * 0.5 + aParams.y * 1.3) * 0.5;
   vec3 ang = vec3(uTime * aParams.z + aParams.y, uTime * aParams.z * 0.7, aParams.y * 2.0 + uTime * 0.4);
   mat3 R = rotXYZ(ang);
@@ -172,14 +177,26 @@ export const petalFragment = /* glsl */ `
 uniform vec3 uColorA;
 uniform vec3 uColorB;
 uniform float uGlow;
+uniform float uShape; // 0 sakura petal, 1 round dot / ember, 2 leaf, 3 sand streak
 varying vec2 vUv;
 varying float vShade;
 void main() {
   vec2 p = vUv * 2.0 - 1.0;
-  // petal: rounded teardrop with a notch at the tip
-  float body = length(vec2(p.x * 1.6 / (1.0 - 0.35 * p.y), p.y));
-  float notch = smoothstep(0.18, 0.0, length(vec2(p.x * 1.4, p.y - 1.0)));
-  float a = smoothstep(1.0, 0.86, body) * (1.0 - notch);
+  float a;
+  if (uShape < 0.5) {
+    // petal: rounded teardrop with a notch at the tip
+    float body = length(vec2(p.x * 1.6 / (1.0 - 0.35 * p.y), p.y));
+    float notch = smoothstep(0.18, 0.0, length(vec2(p.x * 1.4, p.y - 1.0)));
+    a = smoothstep(1.0, 0.86, body) * (1.0 - notch);
+  } else if (uShape < 1.5) {
+    a = smoothstep(0.75, 0.15, length(p));
+  } else if (uShape < 2.5) {
+    // leaf: pointed ellipse with a darker midrib
+    float body = length(vec2(p.x * 2.2 / (1.15 - abs(p.y) * 0.5), p.y));
+    a = smoothstep(1.0, 0.85, body) * (1.0 - 0.35 * smoothstep(0.08, 0.0, abs(p.x)));
+  } else {
+    a = smoothstep(1.0, 0.3, length(vec2(p.x * 0.35, p.y * 3.0)));
+  }
   if (a < 0.05) discard;
   vec3 col = mix(uColorA, uColorB, smoothstep(-1.0, 1.0, p.y)) * vShade;
   col += uGlow * vec3(1.0, 0.75, 0.85) * 0.25;

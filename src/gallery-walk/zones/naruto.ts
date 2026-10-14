@@ -83,7 +83,7 @@ export const naruto: ZoneTheme = {
   env: () => ({
     skyTop: "#3f92e6", skyHorizon: "#d6ecff", moon: "#ffffff", stars: 0, fog: "#cfe3f0", fogDensity: 0.018,
     hemiSky: "#d8ecff", hemiGround: "#4a6a2a", hemi: 0.95, sunColor: "#fff3dc", sun: 2.4, exposure: 1,
-    particleA: "#6abf4b", particleB: "#c6e86a", particleGlow: 0, particleScale: 1.1,
+    particleA: "#6abf4b", particleB: "#c6e86a", particleGlow: 0, particleScale: 1.1, particleShape: 2, particleDensity: 0.5,
   }),
 
   buildWorld(ctx) {
@@ -119,7 +119,7 @@ export const naruto: ZoneTheme = {
     const leafy = { bark: M.bark, blossom: mat(ctx, "#4f9a3a", { flat: true, emissive: "#0f2a08", emissiveIntensity: 0.4 }) as THREE.MeshStandardMaterial };
     const spots: [number, number, number][] = [];
     for (let z = -2; z > -length - 8; z -= 4.5) for (const s of [-1, 1]) spots.push([s * (5.6 + ctx.rand() * 1.2), z + ctx.rand() * 2, 1.1 + ctx.rand() * 0.3], [s * (13 + ctx.rand() * 4), z, 1.4 + ctx.rand() * 0.4]);
-    buildSakuraTrees(root, leafy, track, { blossom: "#4f9a3a", petalA: "#6a9a3a" }, spots.filter(([x, z, s]) => ctx.inWedge(x, z, 2 * s)), 30);
+    buildSakuraTrees(root, leafy, track, { blossom: "#4f9a3a", petalA: "#6a9a3a" }, spots.filter(([x, z, s]) => ctx.inWedge(x, z, 2 * s)), 30, true);
     slotZ.forEach((z, i) => {
       const side = i % 2 === 0 ? -1 : 1;
       const f = sphere(ctx, root, 0.2, side * 2.75, 2.2, z + 1.6, mat(ctx, "#ff5a3a", { emissive: "#ff3020", emissiveIntensity: 1.3 }));

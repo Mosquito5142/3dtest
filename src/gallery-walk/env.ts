@@ -5,13 +5,14 @@ import type { EnvPreset } from "./zones/types";
 export const HUB_ENV: EnvPreset = {
   skyTop: "#151433", skyHorizon: "#8a4f7e", moon: "#fff2dc", stars: 0.7, fog: "#3e2e4e", fogDensity: 0.022,
   hemiSky: "#b0a0e8", hemiGround: "#3a2838", hemi: 0.9, sunColor: "#c8c0ff", sun: 0.8, exposure: 1.08,
-  particleA: "#ffc2d8", particleB: "#fff0f6", particleGlow: 0.8, particleScale: 0.8,
+  particleA: "#ffc2d8", particleB: "#fff0f6", particleGlow: 0.8, particleScale: 0.8, particleShape: 0, particleDensity: 0,
 };
 
 type Resolved = {
   skyTop: THREE.Color; skyHorizon: THREE.Color; moon: THREE.Color; fog: THREE.Color; hemiSky: THREE.Color;
   hemiGround: THREE.Color; sunColor: THREE.Color; particleA: THREE.Color; particleB: THREE.Color;
   stars: number; fogDensity: number; hemi: number; sun: number; exposure: number; particleGlow: number; particleScale: number;
+  particleShape: number; particleDensity: number; particleRise: number; particleGust: number;
 };
 const COLOR_KEYS = ["skyTop", "skyHorizon", "moon", "fog", "hemiSky", "hemiGround", "sunColor", "particleA", "particleB"] as const;
 const NUM_KEYS = ["stars", "fogDensity", "hemi", "sun", "exposure", "particleGlow", "particleScale"] as const;
@@ -20,6 +21,10 @@ export function resolve(p: EnvPreset): Resolved {
   const r = {} as Resolved;
   for (const k of COLOR_KEYS) r[k] = new THREE.Color(p[k]);
   for (const k of NUM_KEYS) r[k] = p[k];
+  r.particleShape = p.particleShape;
+  r.particleDensity = p.particleDensity;
+  r.particleRise = p.particleRise ? 1 : 0;
+  r.particleGust = p.particleGust ?? 0;
   return r;
 }
 
@@ -41,11 +46,27 @@ export function createEnvBlender(t: EnvTargets, start: Resolved) {
   const cur = resolve(HUB_ENV);
   lerpInto(cur, start, start, 0);
   const target = resolve(HUB_ENV);
+  // particle style switches only while the particles are faded out, so a petal never turns into sand mid-air
+  const style = { shape: start.particleShape, rise: start.particleRise, gust: start.particleGust, density: start.particleDensity };
   return {
     /** target = mix(a, b, w); the applied values ease toward it so warps fade instead of popping */
     update(a: Resolved, b: Resolved, w: number, dt: number) {
       lerpInto(target, a, b, w);
       lerpInto(cur, cur, target, 1 - Math.exp(-dt * 2.5));
+      const wa = (1 - w) * a.particleDensity;
+      const wb = w * b.particleDensity;
+      const dom = wb >= wa ? b : a;
+      let want = a.particleDensity + (b.particleDensity - a.particleDensity) * w;
+      const differs = dom.particleShape !== style.shape || dom.particleRise !== style.rise || dom.particleGust !== style.gust;
+      if (differs && dom.particleDensity > 0) {
+        want = 0;
+        if (style.density < 0.02) {
+          style.shape = dom.particleShape;
+          style.rise = dom.particleRise;
+          style.gust = dom.particleGust;
+        }
+      }
+      style.density += (want - style.density) * (1 - Math.exp(-dt * 3));
       t.sky.uniforms.uTop.value.copy(cur.skyTop);
       t.sky.uniforms.uHorizon.value.copy(cur.skyHorizon);
       t.sky.uniforms.uMoonColor.value.copy(cur.moon);
@@ -62,6 +83,10 @@ export function createEnvBlender(t: EnvTargets, start: Resolved) {
       t.particles.uniforms.uColorB.value.copy(cur.particleB);
       t.particles.uniforms.uGlow.value = cur.particleGlow;
       t.particles.uniforms.uScale.value = cur.particleScale;
+      t.particles.uniforms.uDensity.value = style.density;
+      t.particles.uniforms.uShape.value = style.shape;
+      t.particles.uniforms.uRise.value = style.rise;
+      t.particles.uniforms.uGust.value = style.gust;
     },
   };
 }

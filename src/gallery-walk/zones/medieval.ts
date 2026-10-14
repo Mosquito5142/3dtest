@@ -36,7 +36,7 @@ export const medieval: ZoneTheme = {
   env: () => ({
     skyTop: "#232445", skyHorizon: "#e8834a", moon: "#ffe8c8", stars: 0.3, fog: "#5e4248", fogDensity: 0.03,
     hemiSky: "#ffc89a", hemiGround: "#3a2a28", hemi: 0.75, sunColor: "#ffb27a", sun: 1.3, exposure: 1.05,
-    particleA: "#ffb050", particleB: "#ff6a20", particleGlow: 1.6, particleScale: 0.45,
+    particleA: "#ffb050", particleB: "#ff6a20", particleGlow: 1.6, particleScale: 0.45, particleShape: 1, particleDensity: 0.35, particleRise: true,
   }),
 
   buildWorld(ctx) {

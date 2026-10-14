@@ -129,6 +129,7 @@ export function buildExhibit(
     mesh = new THREE.Mesh(geo, ctx.track(new THREE.MeshBasicMaterial({ map: canvasTex(ctx, canvas), transparent: true, opacity: 0.9, toneMapped: false })));
   }
   mesh.position.set(0, board.centerY, board.frontZ + 0.02);
+  mesh.userData.dynamic = true; // keeps its own transform (used for focus/inspect), never baked
   holder.add(mesh);
 
   const st = theme.placard;

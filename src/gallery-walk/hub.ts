@@ -169,14 +169,16 @@ export function buildHub(ctx: HubCtx, zones: ZoneTheme[], counts: number[], slot
     color: "#ffd6ec", emissive: "#ff7ab8", emissiveIntensity: 1.4, roughness: 0.15, metalness: 0.3, flatShading: true,
   })));
   crystal.scale.y = 1.6;
+  crystal.userData.dynamic = true;
   crystal.position.y = 3.6;
   root.add(crystal);
   const orbs = zones.map((z) => {
     const o = new THREE.Mesh(track(new THREE.IcosahedronGeometry(0.16, 1)), track(new THREE.MeshBasicMaterial({ color: z.color, toneMapped: false })));
+    o.userData.dynamic = true;
     root.add(o);
     return o;
   });
-  const glow = new THREE.PointLight("#ff9ad0", 6, 14, 1.6);
+  const glow = new THREE.PointLight("#ff9ad0", 6, 10, 1.6);
   glow.position.set(0, 3.6, 0);
   root.add(glow);
 

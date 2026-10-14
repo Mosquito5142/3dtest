@@ -16,12 +16,12 @@ export const shrine: ZoneTheme = {
       ? {
           skyTop: "#6fa6dc", skyHorizon: "#ffe1ea", moon: "#ffffff", stars: 0, fog: "#f2d6e2", fogDensity: 0.03,
           hemiSky: "#cfe6ff", hemiGround: "#8a6a5a", hemi: 0.9, sunColor: "#fff1e0", sun: 2.4, exposure: 1,
-          particleA: "#ff9fbf", particleB: "#ffe6ef", particleGlow: 0, particleScale: 1,
+          particleA: "#ff9fbf", particleB: "#ffe6ef", particleGlow: 0, particleScale: 1, particleShape: 0, particleDensity: 1,
         }
       : {
           skyTop: "#090820", skyHorizon: "#5a2550", moon: "#fff2dc", stars: 1, fog: "#24122e", fogDensity: 0.045,
           hemiSky: "#8a78c8", hemiGround: "#2a1420", hemi: 0.95, sunColor: "#9fb0ff", sun: 0.25, exposure: 1.1,
-          particleA: "#ffb3cb", particleB: "#fff0f5", particleGlow: 1, particleScale: 1,
+          particleA: "#ffb3cb", particleB: "#fff0f5", particleGlow: 1, particleScale: 1, particleShape: 0, particleDensity: 1,
         },
 
   buildWorld(ctx) {
@@ -60,7 +60,7 @@ export const shrine: ZoneTheme = {
         if (ctx.rand() < 0.6) spots.push([s * (8.5 + ctx.rand() * 2.5), z + ctx.rand() * 2, 1.3 + ctx.rand() * 0.3]);
       }
     }
-    buildSakuraTrees(root, M, track, P, spots.filter(([x, z, s]) => ctx.inWedge(x, z, 2 * s)), 90);
+    buildSakuraTrees(root, M, track, P, spots.filter(([x, z, s]) => ctx.inWedge(x, z, 2 * s)), 90, true);
     // shrine hall + offering box + a pair of komainu plinths at the end
     const end = -length + 1.5;
     buildHall(root, M, track, end);

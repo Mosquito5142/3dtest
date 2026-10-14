@@ -118,7 +118,7 @@ export const maldives: ZoneTheme = {
   env: () => ({
     skyTop: "#2f86dc", skyHorizon: "#c6ecff", moon: "#ffffff", stars: 0, fog: "#bfe6f2", fogDensity: 0.012,
     hemiSky: "#e0f4ff", hemiGround: "#7ac0c8", hemi: 1.0, sunColor: "#fff4e0", sun: 2.6, exposure: 1.02,
-    particleA: "#ffffff", particleB: "#bff6ff", particleGlow: 1, particleScale: 0.35,
+    particleA: "#ffffff", particleB: "#bff6ff", particleGlow: 1, particleScale: 0.35, particleShape: 1, particleDensity: 0,
   }),
 
   buildWorld(ctx) {
@@ -134,6 +134,7 @@ export const maldives: ZoneTheme = {
     })));
     water.rotation.x = -Math.PI / 2;
     water.position.set(0, -0.25, ctx.hubRadius);
+    water.userData.dynamic = true;
     root.add(water);
     const u = (water.material as THREE.ShaderMaterial).uniforms;
     ctx.updaters.push((t) => {

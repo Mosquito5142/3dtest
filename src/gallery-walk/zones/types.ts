@@ -20,6 +20,14 @@ export type EnvPreset = {
   particleB: string;
   particleGlow: number;
   particleScale: number;
+  /** 0 sakura petal, 1 round dot / ember, 2 leaf, 3 sand streak */
+  particleShape: number;
+  /** share of particles drawn, 0 = none */
+  particleDensity: number;
+  /** particles float upward (embers) instead of falling */
+  particleRise?: boolean;
+  /** extra sideways drift (blowing sand) */
+  particleGust?: number;
 };
 
 /** A point that can borrow one of the pooled real lights when the player is near. */

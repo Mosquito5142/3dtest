@@ -42,7 +42,7 @@ export function ShrineGalleryWalk({ variant = "yozakura", photos = cosplayPhotos
         if (import.meta.env.DEV) (window as unknown as { __walk?: GalleryWalk }).__walk = walk; // handy for testing
         setMeta(walk.exhibits);
         setIsTouch(walk.isTouch);
-        setReady(true);
+        walk.ready.then(() => alive && setReady(true));
       });
     return () => {
       alive = false;

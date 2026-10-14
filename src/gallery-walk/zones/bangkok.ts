@@ -105,7 +105,7 @@ export const bangkok: ZoneTheme = {
   env: () => ({
     skyTop: "#0b0820", skyHorizon: "#46205a", moon: "#ffe8f0", stars: 0.35, fog: "#24123a", fogDensity: 0.032,
     hemiSky: "#9070d0", hemiGround: "#2a1830", hemi: 0.8, sunColor: "#8a90ff", sun: 0.35, exposure: 1.15,
-    particleA: "#ff5fc0", particleB: "#5ff0ff", particleGlow: 1.8, particleScale: 0.3,
+    particleA: "#ff5fc0", particleB: "#5ff0ff", particleGlow: 1.8, particleScale: 0.3, particleShape: 1, particleDensity: 0.2,
   }),
 
   buildWorld(ctx) {
@@ -141,14 +141,16 @@ export const bangkok: ZoneTheme = {
     }
     const wireM = new THREE.LineBasicMaterial({ color: "#151515" });
     ctx.track(wireM);
+    const wirePts: THREE.Vector3[] = [];
     for (let i = 0; i < poleZ.length - 1; i++) for (const side of [-1, 1]) for (let k = 0; k < 4; k++) {
-      const pts: THREE.Vector3[] = [];
-      for (let t = 0; t <= 10; t++) {
-        const zz = poleZ[i] + (poleZ[i + 1] - poleZ[i]) * (t / 10);
-        pts.push(new THREE.Vector3(side * 4.6 + (k - 1.5) * 0.18, 6.3 - k * 0.12 - Math.sin((t / 10) * Math.PI) * (0.5 + k * 0.15), zz));
-      }
-      root.add(new THREE.Line(ctx.track(new THREE.BufferGeometry().setFromPoints(pts)), wireM));
+      const at = (t: number) => new THREE.Vector3(
+        side * 4.6 + (k - 1.5) * 0.18,
+        6.3 - k * 0.12 - Math.sin((t / 10) * Math.PI) * (0.5 + k * 0.15),
+        poleZ[i] + (poleZ[i + 1] - poleZ[i]) * (t / 10),
+      );
+      for (let t = 0; t < 10; t++) wirePts.push(at(t), at(t + 1));
     }
+    root.add(new THREE.LineSegments(ctx.track(new THREE.BufferGeometry().setFromPoints(wirePts)), wireM));
     const bulbs = new THREE.InstancedMesh(ctx.track(new THREE.SphereGeometry(0.07, 6, 4)), mat(ctx, "#ffffff", { basic: true }), poleZ.length * 26);
     const m4 = new THREE.Matrix4();
     const c = new THREE.Color();

@@ -50,6 +50,8 @@ You spawn in the **central plaza (写真の広場)**, a circle with a glowing cr
 
 Top right shows how many photos you have viewed, in this zone and overall. Bottom right is a minimap of the plaza and every path (photos you have seen turn the zone's colour). The sky, fog, light and falling particles change smoothly as you walk into each zone.
 
+**Performance:** static scenery in each zone is merged into just a few meshes (static batching), all shaders are compiled before you start walking, and resolution adjusts automatically when the frame rate drops below about 48 fps (it goes back up once there's headroom). Falling particles differ per zone: sakura only in the shrine, embers in medieval, sand in Dune, leaves in the ninja village, neon dust in Bangkok, and none in the plaza or the Maldives.
+
 ## Card page controls (`?view=card`)
 
 - Move the mouse: tilt the card and see the holographic foil

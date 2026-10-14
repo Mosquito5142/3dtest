@@ -29,13 +29,13 @@ export function createTracker() {
   return { track, disposeAll: () => list.forEach((d) => d.dispose()) };
 }
 
-export function createRenderer(P: Palette) {
+export function createRenderer(P: Palette, opts: { maxPixelRatio?: number; shadows?: boolean } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.maxPixelRatio ?? 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = P.exposure;
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = opts.shadows ?? true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   return renderer;
 }
@@ -218,9 +218,10 @@ export function buildChochinRow(scene: THREE.Object3D, M: ShrineMaterials, track
 }
 
 /** Sakura trees: trunks + branches + instanced blossom clusters, plus a carpet of fallen petals. */
-export function buildSakuraTrees(scene: THREE.Object3D, M: Pick<ShrineMaterials, "bark" | "blossom">, track: Track, P: { blossom: string; petalA: string }, spots: [number, number, number][], carpetPerTree = 220) {
-  const blossomGeo = track(new THREE.IcosahedronGeometry(0.42, 1));
-  const perTree = 70;
+export function buildSakuraTrees(scene: THREE.Object3D, M: Pick<ShrineMaterials, "bark" | "blossom">, track: Track, P: { blossom: string; petalA: string }, spots: [number, number, number][], carpetPerTree = 220, lowPoly = false) {
+  // lowPoly: fewer, larger, simpler blossom clusters (used by the walk, where many trees are on screen)
+  const blossomGeo = track(new THREE.IcosahedronGeometry(lowPoly ? 0.55 : 0.42, lowPoly ? 0 : 1));
+  const perTree = lowPoly ? 38 : 70;
   const blossoms = new THREE.InstancedMesh(blossomGeo, M.blossom, spots.length * perTree);
   blossoms.castShadow = true;
   const m4 = new THREE.Matrix4();
@@ -299,6 +300,7 @@ export function buildFallingPetals(scene: THREE.Object3D, track: Track, P: Palet
     vertexShader: petalVertex, fragmentShader: petalFragment, transparent: true, side: THREE.DoubleSide, depthWrite: false,
     uniforms: {
       uTime: { value: 0 }, uWind: { value: 0.35 }, uBox: { value: box }, uCenter: { value: center.clone() }, uScale: { value: 1 },
+      uDensity: { value: 1 }, uRise: { value: 0 }, uGust: { value: 0 }, uShape: { value: 0 },
       uColorA: { value: new THREE.Color(P.petalA) }, uColorB: { value: new THREE.Color(P.petalB) }, uGlow: { value: P.petalGlow },
     },
   }));

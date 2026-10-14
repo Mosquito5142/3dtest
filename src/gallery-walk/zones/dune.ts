@@ -73,7 +73,7 @@ export const dune: ZoneTheme = {
   env: () => ({
     skyTop: "#b86a3a", skyHorizon: "#f6cf94", moon: "#fff6e8", stars: 0, fog: "#e2a868", fogDensity: 0.028,
     hemiSky: "#ffd8a8", hemiGround: "#8a5a30", hemi: 0.85, sunColor: "#ffd29a", sun: 2.3, exposure: 0.98,
-    particleA: "#e8c08a", particleB: "#c89060", particleGlow: 0, particleScale: 0.4,
+    particleA: "#e8c08a", particleB: "#c89060", particleGlow: 0, particleScale: 0.6, particleShape: 3, particleDensity: 0.8, particleGust: 2.5,
   }),
 
   buildWorld(ctx) {
