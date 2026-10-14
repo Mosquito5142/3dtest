@@ -143,6 +143,7 @@ uniform float uTime;
 uniform float uWind;
 uniform vec3 uBox;
 uniform vec3 uCenter; // petals wrap inside a box centred here (follows the viewer)
+uniform float uScale;  // particle size multiplier
 varying vec2 vUv;
 varying float vShade;
 mat3 rotXYZ(vec3 a) {
@@ -160,7 +161,7 @@ void main() {
   pos.z = mod(aOffset.z - uCenter.z + uBox.z * 0.5, uBox.z) - uBox.z * 0.5 + uCenter.z + cos(uTime * 0.5 + aParams.y * 1.3) * 0.5;
   vec3 ang = vec3(uTime * aParams.z + aParams.y, uTime * aParams.z * 0.7, aParams.y * 2.0 + uTime * 0.4);
   mat3 R = rotXYZ(ang);
-  vec3 local = R * (position * aParams.w);
+  vec3 local = R * (position * aParams.w * uScale);
   vShade = 0.65 + 0.35 * abs((R * vec3(0.0, 0.0, 1.0)).z);
   vec4 mv = modelViewMatrix * vec4(pos + local, 1.0);
   gl_Position = projectionMatrix * mv;

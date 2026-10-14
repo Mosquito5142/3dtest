@@ -13,6 +13,8 @@ export type CosplayPhoto = {
   photographer?: string;
   /** Accent colour used for placeholder art and the card ribbon */
   accent: string;
+  /** Zone folder in src/cosplay/<zone>/ (gallery walk); top-level files belong to "shrine" */
+  zone?: string;
 };
 
 /** Placeholder line-up shown until real photos are added to src/cosplay/. */
@@ -33,27 +35,28 @@ const samplePhotos: CosplayPhoto[] = [
 
 const ACCENTS = ["#e8436a", "#f08a3c", "#7c5cff", "#d6334a", "#5b8cff", "#c2367f", "#7fd3e8", "#3fb58c"];
 
-// Every image dropped into src/cosplay/ (any file name) is picked up automatically, sorted by name.
-const found = import.meta.glob("/src/cosplay/*.{jpg,jpeg,png,webp,avif,JPG,JPEG,PNG,WEBP}", {
+// Every image in src/cosplay/ or one of its zone folders (any file name) is picked up automatically, sorted by name.
+const found = import.meta.glob("/src/cosplay/**/*.{jpg,jpeg,png,webp,avif,JPG,JPEG,PNG,WEBP}", {
   eager: true,
   query: "?url",
   import: "default",
 }) as Record<string, string>;
 
-/** Optional per-file captions: key = file name in src/cosplay/. */
+/** Optional per-file captions: key = path inside src/cosplay/, e.g. "naruto/01.jpg". */
 export const captions: Record<string, Partial<CosplayPhoto>> = {
-  // Edit these to match each photo (key = file name in src/cosplay/).
-  "01.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
-  "02.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
-  "03.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
-  "04.jpg": { character: "暁", subtitle: "Akatsuki", series: "Naruto · Akatsuki" },
-  "05.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "naruto/01.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "naruto/02.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "naruto/03.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
+  "naruto/04.jpg": { character: "暁", subtitle: "Akatsuki", series: "Naruto · Akatsuki" },
+  "naruto/05.jpg": { character: "小南", subtitle: "Konan", series: "Naruto · Akatsuki" },
 };
 
 const userPhotos: CosplayPhoto[] = Object.keys(found)
   .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   .map((path, i) => {
-    const file = path.split("/").pop()!;
+    const key = path.replace("/src/cosplay/", "");
+    const file = key.split("/").pop()!;
+    const zone = key.includes("/") ? key.split("/")[0] : "shrine";
     const sample = samplePhotos[i % samplePhotos.length];
     return {
       src: found[path],
@@ -62,7 +65,8 @@ const userPhotos: CosplayPhoto[] = Object.keys(found)
       series: "Sakura Shrine",
       cosplayer: "@cosplayer",
       accent: ACCENTS[i % ACCENTS.length],
-      ...captions[file],
+      zone,
+      ...captions[key],
     };
   });
 

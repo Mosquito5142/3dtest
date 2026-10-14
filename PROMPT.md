@@ -71,3 +71,20 @@ Turn the main page into a game-like experience: you walk through a "cosplay phot
 - **Game-style HUD**: viewed-photo counter + progress bar, a minimap of the path, a start screen with instructions, and a pause screen
 - **Performance**: a pool of only 6 lantern lights moves to the lanterns nearest the player; the sky, sun shadows and falling petals follow the player; works with any number of photos
 - Keep the old card page at `?view=card`, and share the shrine/sakura builders between the two pages (`world.ts`)
+
+---
+
+# Part 3: central plaza + 6 themed worlds
+
+- **Central plaza**: a circular stone plaza (radius 12 m) where you spawn. A crystal floats over an octagonal pedestal with zone-coloured orbs circling it, the compass floor has an arrow and name toward every zone, a stone balustrade has gaps at the gates, and there is a signpost (zone name + photo count) and a lamp post between every pair of gates
+- **6 wings** spread out every 60° (in each zone's local coordinates, so the theme code doesn't need to know the angle). Each zone stays inside its own 60° wedge (`inWedge`) so scenery doesn't leak into the next zone
+  1. **桜神社 Japanese shrine**: senbon torii, stone lanterns, sakura, shrine hall · ema boards · sakura petals
+  2. **中世の城 Medieval**: cobblestones, crenellated walls, towers, stone arches, banners, wall torches, castle keep · gold frames on stone walls · glowing embers
+  3. **モルディブ Maldives**: boardwalk over a turquoise lagoon (water shader with caustics + sun glints), sand islands, palm trees, overwater bungalows, overwater villa · bamboo stands · sparkles
+  4. **バンコク Bangkok**: street at night, shophouses with Thai neon signs, tangled power lines, string lights, tuk-tuks, street-food carts, a Thai temple hall with tiered roofs and chofa · gold frames on red lacquer · neon dust
+  5. **砂の惑星 Dune**: rolling sand dunes, red rock formations, banded obelisks, two moons, a sandworm arching out of the sand · sandstone slabs with bronze frames · blowing sand
+  6. **忍の里 Ninja village**: village gate, houses with red roofs and water tanks, green trees, ramen stall, round red tower with 火 · hanging scroll boards · green leaves
+- **Room for future photos**: every zone has at least 12 slots (empty frames waiting for photos); if a zone gets more photos than that, its path grows longer automatically. Photos are sorted per zone by folder `src/cosplay/<zone>/`
+- **Atmosphere switching**: each zone has its own `EnvPreset` (sky, fog, sun, hemisphere light, exposure, particle colour and size) that blends smoothly as you walk out of the plaza
+- **Performance**: a pool of 8 lights moves to the nearest light points, zones you aren't in are hidden once you're deep inside one, the sky, sun shadow and particles follow the player, and materials and geometry are cached and shared
+- Controls: `1`–`6` warp to zones, `H` back to the plaza, ←/→ move between photos within the zone; HUD shows a zone-name banner when you enter a zone, the viewed count per zone and overall, and a minimap of the whole world

@@ -94,7 +94,7 @@ export function buildEnvironment(scene: THREE.Scene, P: Palette, track: Track, g
 }
 
 /** Flagstone path from zStart going toward -z. */
-export function buildPath(scene: THREE.Scene, M: ShrineMaterials, track: Track, zStart: number, count: number, step = 1.05) {
+export function buildPath(scene: THREE.Object3D, M: ShrineMaterials, track: Track, zStart: number, count: number, step = 1.05) {
   const stoneGeo = track(new THREE.BoxGeometry(1, 0.08, 1));
   for (let i = 0; i < count; i++) {
     const s = new THREE.Mesh(stoneGeo, M.stone);
@@ -106,7 +106,7 @@ export function buildPath(scene: THREE.Scene, M: ShrineMaterials, track: Track, 
   }
 }
 
-export function buildTorii(scene: THREE.Scene, M: ShrineMaterials, track: Track, z: number, s: number, x = 0) {
+export function buildTorii(scene: THREE.Object3D, M: ShrineMaterials, track: Track, z: number, s: number, x = 0) {
   const g = new THREE.Group();
   const pillarGeo = track(new THREE.CylinderGeometry(0.17, 0.2, 4.2, 20));
   for (const px of [-1.75, 1.75]) {
@@ -146,7 +146,7 @@ export function buildTorii(scene: THREE.Scene, M: ShrineMaterials, track: Track,
 }
 
 /** Shrine hall with glowing doors, facing +z. */
-export function buildHall(scene: THREE.Scene, M: ShrineMaterials, track: Track, z: number) {
+export function buildHall(scene: THREE.Object3D, M: ShrineMaterials, track: Track, z: number) {
   const hall = new THREE.Group();
   const body = new THREE.Mesh(track(new THREE.BoxGeometry(5, 2.2, 3)), M.hall);
   body.position.y = 1.5;
@@ -167,7 +167,7 @@ export function buildHall(scene: THREE.Scene, M: ShrineMaterials, track: Track, 
 export type Flame = { light: THREE.PointLight; mesh: THREE.Mesh; seed: number };
 
 /** Stone lantern (toro) with a flickering candle light. */
-export function buildToro(scene: THREE.Scene, M: ShrineMaterials, track: Track, P: Palette, x: number, z: number, lightRange = 5.5) {
+export function buildToro(scene: THREE.Object3D, M: ShrineMaterials, track: Track, P: Palette, x: number, z: number, lightRange = 5.5) {
   const g = new THREE.Group();
   const parts: [THREE.BufferGeometry, number][] = [
     [new THREE.CylinderGeometry(0.42, 0.5, 0.18, 6), 0.09],
@@ -207,7 +207,7 @@ export function flicker(flames: Flame[], t: number, base: number) {
 }
 
 /** A row of red/white chochin paper lanterns along z. */
-export function buildChochinRow(scene: THREE.Scene, M: ShrineMaterials, track: Track, x: number, zStart: number, count: number, spacing: number, y = 3.05) {
+export function buildChochinRow(scene: THREE.Object3D, M: ShrineMaterials, track: Track, x: number, zStart: number, count: number, spacing: number, y = 3.05) {
   const geo = track(new THREE.SphereGeometry(0.16, 16, 12));
   for (let i = 0; i < count; i++) {
     const m = new THREE.Mesh(geo, M.chochin[i % 2]);
@@ -218,7 +218,7 @@ export function buildChochinRow(scene: THREE.Scene, M: ShrineMaterials, track: T
 }
 
 /** Sakura trees: trunks + branches + instanced blossom clusters, plus a carpet of fallen petals. */
-export function buildSakuraTrees(scene: THREE.Scene, M: ShrineMaterials, track: Track, P: Palette, spots: [number, number, number][], carpetPerTree = 220) {
+export function buildSakuraTrees(scene: THREE.Object3D, M: Pick<ShrineMaterials, "bark" | "blossom">, track: Track, P: { blossom: string; petalA: string }, spots: [number, number, number][], carpetPerTree = 220) {
   const blossomGeo = track(new THREE.IcosahedronGeometry(0.42, 1));
   const perTree = 70;
   const blossoms = new THREE.InstancedMesh(blossomGeo, M.blossom, spots.length * perTree);
@@ -279,7 +279,7 @@ export function buildSakuraTrees(scene: THREE.Scene, M: ShrineMaterials, track: 
 }
 
 /** Falling petals animated entirely in the vertex shader. Move `uCenter` to keep them around the viewer. */
-export function buildFallingPetals(scene: THREE.Scene, track: Track, P: Palette, box: THREE.Vector3, center: THREE.Vector3, count = 1800) {
+export function buildFallingPetals(scene: THREE.Object3D, track: Track, P: Palette, box: THREE.Vector3, center: THREE.Vector3, count = 1800) {
   const base = new THREE.PlaneGeometry(0.09, 0.11);
   const geo = track(new THREE.InstancedBufferGeometry());
   geo.index = base.index;
@@ -298,7 +298,7 @@ export function buildFallingPetals(scene: THREE.Scene, track: Track, P: Palette,
   const mat = track(new THREE.ShaderMaterial({
     vertexShader: petalVertex, fragmentShader: petalFragment, transparent: true, side: THREE.DoubleSide, depthWrite: false,
     uniforms: {
-      uTime: { value: 0 }, uWind: { value: 0.35 }, uBox: { value: box }, uCenter: { value: center.clone() },
+      uTime: { value: 0 }, uWind: { value: 0.35 }, uBox: { value: box }, uCenter: { value: center.clone() }, uScale: { value: 1 },
       uColorA: { value: new THREE.Color(P.petalA) }, uColorB: { value: new THREE.Color(P.petalB) }, uGlow: { value: P.petalGlow },
     },
   }));

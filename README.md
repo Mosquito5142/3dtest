@@ -13,14 +13,27 @@ npm run dev
 - http://localhost:5173/?variant=hanami: daytime version
 - http://localhost:5173/?view=card: the original holographic-card page
 
-## Adding your cosplay photos
+## World layout
 
-1. Copy every photo (for example from `C:\Users\mos\Pictures\55`) into **`src/cosplay/`**
+You spawn in the **central plaza (写真の広場)**, a circle with a glowing crystal in the middle. **6 paths** branch off to different worlds:
+
+| Key | Zone | Photo folder |
+|---|---|---|
+| `1` | 桜神社 Japanese shrine (night sakura) | `src/cosplay/shrine/` |
+| `2` | 中世の城 Medieval | `src/cosplay/medieval/` |
+| `3` | モルディブ Maldives islands | `src/cosplay/maldives/` |
+| `4` | バンコク Bangkok | `src/cosplay/bangkok/` |
+| `5` | 砂の惑星 Dune / desert planet | `src/cosplay/dune/` |
+| `6` | 忍の里 Ninja village (Naruto) | `src/cosplay/naruto/` |
+
+## Adding cosplay photos
+
+1. Put your photos in the folder for the zone you want them in, e.g. `src/cosplay/medieval/`
    ```powershell
-   Copy-Item "C:\Users\mos\Pictures\55\*" -Destination ".\src\cosplay\" -Include *.jpg,*.jpeg,*.png,*.webp
+   Copy-Item "C:\Users\mos\Pictures\55\*" -Destination ".\src\cosplay\naruto\" -Include *.jpg,*.jpeg,*.png,*.webp
    ```
-2. Refresh the page. Every photo appears automatically, sorted by file name. Portrait (2:3) photos look best.
-3. (Optional) Add character, series and cosplayer names per file in `captions` in `src/shaders/sakura-shrine-holo-card/photos.ts`.
+2. Refresh the page. Photos appear automatically, sorted by file name. Every zone has **12 slots** ready. Slots without a photo show an empty frame marked "ช่องว่าง รอใส่รูป" (empty, waiting for a photo). If you add more than 12, the path grows longer on its own.
+3. (Optional) Add character, series and cosplayer names in `captions` in `src/shaders/sakura-shrine-holo-card/photos.ts`, keyed by path, e.g. `"naruto/01.jpg"`.
 
 ## Walk mode controls
 
@@ -30,11 +43,12 @@ npm run dev
 | mouse (click once to start) | drag on the right half of the screen | look around |
 | `Shift` | push the joystick all the way | run |
 | `E` / click a photo | tap | view the photo up close |
-| `←` `→` (while viewing) | buttons ‹ › | previous / next photo |
-| `1`–`9` | | jump straight to photo N |
+| `←` `→` (while viewing) | buttons ‹ › | previous / next photo in the same zone |
+| `1`–`6` | | warp to a zone's gate |
+| `H` | button ⌂ | back to the central plaza |
 | `Esc` | | take a break / leave the close-up view |
 
-Top right shows how many photos you have viewed; bottom right is a minimap of the path (photos you have seen turn pink).
+Top right shows how many photos you have viewed, in this zone and overall. Bottom right is a minimap of the plaza and every path (photos you have seen turn the zone's colour). The sky, fog, light and falling particles change smoothly as you walk into each zone.
 
 ## Card page controls (`?view=card`)
 
